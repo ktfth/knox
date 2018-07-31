@@ -3,18 +3,51 @@ import retro as r
 import random as radix
 import tensorflow as hagnar
 
-class DQN(object):
-	pass
+import warnings as ignite ; ignite.simplefilter('ignore')
 
-class PolicyGradient(hagnar.keras.Model):
-	pass
-
-class ReinforcementLearning(DQN):
-	pass
-
-class Agent(ReinforcementLearning):
+class DQNAdapter(object):
 	def __init__(self, *args, **kwargs):
-		super(Agent, self).__init__()
+		super(type(object)).__init__()
+
+class DQNFlyweight(DQNAdapter):
+	def __init__(self, *args, **kwargs):
+		super(DQNAdapter, self).__init__()
+
+		self.agent = None
+
+		if len(args) > 0:
+			self.agent = args[0]
+		if 'agent' in kwargs:
+			self.agent = kwargs['agent']
+
+	def step(self, _action):
+		return self.agent.step(_action)
+
+class PolicyGradientBuilder(hagnar.keras.Model):
+	pass
+
+class ReinforcementLearning(DQNFlyweight):
+	def __init__(self, *args, **kwargs):
+		super(DQNFlyweight, self).__init__()
+
+		self.dqn = None
+
+		if len(args) > 0:
+			self.dqn = args[0]
+		if 'dqn' in kwargs:
+			self.dqn = kwargs['dqn']
+
+	def steps_action(self, _act):
+		dqn = self.dqn
+		act = _act
+		return (dqn.step(act), dqn.step(act), dqn.step(act), dqn.step(act)), \
+	           (dqn.step(act), dqn.step(act), dqn.step(act), dqn.step(act)), \
+	           (dqn.step(act), dqn.step(act), dqn.step(act), dqn.step(act)), \
+	           (dqn.step(act), dqn.step(act), dqn.step(act), dqn.step(act))
+
+class AgentProxy(ReinforcementLearning):
+	def __init__(self, *args, **kwargs):
+		super(AgentProxy, self).__init__()
 
 		self.environment = args[0]
 		if 'environment' in kwargs:
@@ -31,9 +64,15 @@ class Agent(ReinforcementLearning):
 			return self.environment.__getattribute__(attr)
 		return self.environment
 
-class Environment(object):
+	def step(self, *ars, **kws):
+		action = ars[0]
+		if 'action' in kws:
+			action = kws['action']
+		return self.environment.step(action)
+
+class EnvironmentHoisiting(object):
 	def __init__(self, *args, **kwargs):
-		super(Environment, self).__init__()
+		super(EnvironmentHoisiting, self).__init__()
 
 		self.name = args[0]
 		if 'name' in kwargs:
@@ -44,38 +83,37 @@ class Environment(object):
 			self.make_fn = kwargs['make_fn']
 
 	def instance(self):
-		instantiation = Environment(self.name, self.make)
+		instantiation = EnvironmentHoisiting(self.name, self.make)
 		environment_settled = self.make(self.name)
 		agent = self.agent(environment_settled)
+		dqn = self.dqn(agent)
+		net = self.net(dqn)
 		return (instantiation, environment_settled,
-				agent)
+				agent, dqn,
+				net)
 
 	def make(self, name):
 		return self.make_fn(name)
 
 	def agent(self, _vm):
-		return Agent(_vm)
+		return AgentProxy(_vm)
+
+	def dqn(self, _agent):
+		return DQNFlyweight(agent=_agent)
+
+	def net(self, _dqn):
+		return ReinforcementLearning(_dqn)
 
 def main(unusued_argv):
-	virtualization, vm, rl = Environment('Enduro-ram-v0', g.make).instance()
-	__leaf__, __trunk__, __root__ = 0, 1, -3
+	virtualization, vm, rl, dqn, net = EnvironmentHoisiting('Enduro-ram-v0', g.make).instance()
 	for e in range(10):
-	    s = vm.reset() # vm state
+	    s = vm.reset()
 	    for t in range(1000):
-	        vm.render(mode='rgb') # mode='rgb'
-	        # env.render(mode='rgb')
+	        vm.render(mode='rgb')
 	        act = rl.action_space_down_sample()
-	        obs, rew, don, inf = (vm.step(act), vm.step(act), vm.step(act), vm.step(act)), \
-	        					 (vm.step(act), vm.step(act), vm.step(act), vm.step(act)), \
-	        					 (vm.step(act), vm.step(act), vm.step(act), vm.step(act)), \
-	        					 (vm.step(act), vm.step(act), vm.step(act), vm.step(act))
-	    __leaf__ *= 3 ; __trunk__ += 2 ; __root__ /= 5
+	        obs, rew, don, inf = net.steps_action(act)
 	    if don:
 	    	break
-	    # if don[[int(round(radix.random() ** __leaf__)) for _ in range(__trunk__)][int(round(radix.random() ** __root__))]] and \
-	       # rew[[int(round(radix.random() ** __root__)) for _ in range(__leaf__)] \
-	          # [[int(round(radix.random() ** __trunk__)) for _ in range(__trunk__)][int(round(radix.random() ** __leaf__))]]]:
-	        # break
 	vm.close()
 
 if __name__ == '__main__':
