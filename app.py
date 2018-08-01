@@ -23,9 +23,9 @@ parser.add_argument('--episodes', type=int, default=10,
 parser.add_argument('--timesteps', type=int, default=1000,
 								   help='Watchout series')
 
-parser.add_argument('--policy_construct_file_path', type=str, default='solid_buma.h5',
+parser.add_argument('--policy_construct_file_path', type=str, default='solid_state.h5',
 													help='Constructing buma')
-parser.add_argument('--policy_builder_file_path', type=str, default='solid_buma.h5',
+parser.add_argument('--policy_builder_file_path', type=str, default='solid_state.h5',
 												  help='Builder buma')
 
 parser.add_argument('--state_size', type=int, default=100800,
@@ -129,9 +129,13 @@ class PolicyGradientBuilder(object):
 		decay = self.decay
 		model = tf.keras.models.Sequential()
 		model.add(tf.keras.layers.Dense(16, input_dim=state_size))
+		model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
+		model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
+		model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(16, activation=tf.nn.relu))
+		model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear))
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
 															 epsilon=K.epsilon(),
@@ -162,14 +166,10 @@ class PolicyGradientBuilder(object):
 		return ars[0]
 
 	def actual(self, state):
-		if K.epsilon() >= np.random.rand():
+		if np.random.rand() <= K.epsilon():
 			return np.random.randint(self.action_size)
-		predicted_state = self.model.predict(state)
-		if not predicted_state:
-			predicted_seq = state
-			return predicted_seq
-		predicted_seq = np.argmax(predicted_state[0])
-		return predicted_seq
+		p = self.model.predict(np.array([[state[0] for _ in np.arange(self.state_size)]]))
+		return (p and (np.argmax(p[0]),)) or state
 
 	def replay(self, batch_size):
 		es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0,
@@ -188,7 +188,7 @@ class PolicyGradientBuilder(object):
 				t = self.target_model.predict(next_state)[0]
 				target[0][action] = reward + self.gamma * t[np.argmax(a)]
 			self.model.fit(state, target,
-						   epochs=10, verbose=0,
+						   epochs=1, verbose=0,
 						   callbacks=[es, rpg])
 
 	def _mean_q(self, y_true, y_pred):
@@ -206,7 +206,7 @@ class PolicyGradientBuilder(object):
 		return self.model
 
 	def generate(self, *ars, **kws):
-		return self.actual(('sample' in kws and kws['sample']) or ars[0])
+		return self.actual(('sample' in kws and kws['sample']) or ars)
 
 	def learn(self, *ars, **kws):
 		samples = ars[0]
@@ -341,6 +341,7 @@ def main(argv):
 				vm.render()
 			# act = policy_gradient.generate(rl.action_space_down_sample(s))
 			act = rl.action_space_down_sample(s)
+			act = policy_gradient.generate(act)
 			# obs, rew, don, inf = policy_gradient.learn(net.steps_action(act))
 			obs, rew, don, inf = net.steps_action(act)
 			obs = np.reshape(obs, [1, state_size])
