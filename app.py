@@ -16,6 +16,10 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--mode', type=str, default='rgb',
 							  help='Rendering mode')
+parser.add_argument('--env', type=str, default='list_data_practice',
+							 help='Environment list')
+parser.add_argument('--env_presence', type=str, default='env_spec',
+							 	      help='Environment spec')
 parser.add_argument('--environment', type=str, default='MsPacman-v0',
 									 help='Environment name')
 parser.add_argument('--episodes', type=int, default=10,
@@ -235,7 +239,7 @@ class ReinforcementLearning(DQNFlyweight):
 	def steps_action(self, _act, n=4):
 		dqn = self.dqn
 		act = _act
-		return dqn.step(act)
+		return dqn.step(act) + dqn.step(act)
 		# return ((dqn.step(act) for _ in np.arange(n)) for _ in np.arange(n))
 
 class ReinforcementLearningMemento(object):
@@ -320,6 +324,11 @@ def main(argv):
 	
 	virtualization, vm, rl, dqn, net = EnvironmentHoisiting(args.environment, g.make).instance(state_size, action_size)
 
+	if args.env == 'list_data' and args.env_presence != 'env_spec':
+		return '\n'.join([str(name) for name in g.envs.registry.all() if str(name).find(args.env_presence) > -1])
+	if args.env == 'list_data' and args.env_presence == 'env_spec':
+		return '\n'.join([str(name) for name in g.envs.registry.all()])
+
 	# if len(vm.observation_space.shape) > 0:
 	# 	state_size = vm.observation_space.shape[0]
 	# if len(vm.action_space.shape) > 0 and 'n' in dir(vm.action_space):
@@ -343,11 +352,11 @@ def main(argv):
 			act = rl.action_space_down_sample(s)
 			act = policy_gradient.generate(act)
 			# obs, rew, don, inf = policy_gradient.learn(net.steps_action(act))
-			obs, rew, don, inf = net.steps_action(act)
+			obs, wat, rew, ske, don, inf, ass, ast = net.steps_action(act)
 			obs = np.reshape(obs, [1, state_size])
 			# policy_gradient.replay(64)
 			policy_gradient.save(args.policy_builder_file_path)
-		if don:
+		if don.all():
 			break
 		# policy_gradient.replay(16)
 		policy_gradient.save(args.policy_builder_file_path)
