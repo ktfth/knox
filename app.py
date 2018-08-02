@@ -63,7 +63,7 @@ class policy_gradient_h_params:
 	decay = 10e-4
 
 class memory:
-	alloc = deque(maxlen=2046)
+	alloc = deque(maxlen=5000)
 
 class HuberLoss:
     def __init__(self, target, prediction):
@@ -141,6 +141,7 @@ class PolicyGradientBuilder(object):
 		model.add(tf.keras.layers.Dense(16, activation=tf.nn.relu))
 		model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear))
+		model.add(tf.keras.layers.Flatten())
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
 															 epsilon=K.epsilon(),
 															 decay=decay),
@@ -167,7 +168,7 @@ class PolicyGradientBuilder(object):
 	def memoization(self, *ars, **kws):
 		rank = self._produce_rank(*ars, **kws)
 		self.memory.append(rank)
-		return ars[0]
+		return rank
 
 	def actual(self, state):
 		if np.random.rand() <= K.epsilon():
@@ -182,18 +183,23 @@ class PolicyGradientBuilder(object):
 		rpg = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
 												   patience=5, min_lr=0.001)
 		mini_batching_size = radix.sample(self.memory, batch_size)
-		for state, action, reward, next_state, done in mini_batching_size:
-			target = self.model.predict(state)
-			reward = reward * .022
-			if done:
-				target[0][action] = reward
-			else:
-				a = self.model.predict(next_state)[0]
-				t = self.target_model.predict(next_state)[0]
-				target[0][action] = reward + self.gamma * t[np.argmax(a)]
-			self.model.fit(state, target,
-						   epochs=1, verbose=0,
-						   callbacks=[es, rpg])
+		try:
+			for state, action, reward, next_state, done in mini_batching_size:
+				target = self.model.predict(state)
+				reward = reward * .022
+				if done:
+					target[0][action] = reward
+				else:
+					a = self.model.predict(next_state)[0]
+					t = self.target_model.predict(next_state)[0]
+					target[0][action] = reward + self.gamma * t[np.argmax(a)]
+				self.model.fit(state, target,
+							   epochs=1, verbose=0,
+							   callbacks=[es, rpg])
+		except Exception as e:
+			tf.logging.debug(e)
+		finally:
+			return (self.model, self.target_model)
 
 	def _mean_q(self, y_true, y_pred):
 		return QMeaning(y_true, y_pred).eval_discrete()
@@ -216,7 +222,8 @@ class PolicyGradientBuilder(object):
 		samples = ars[0]
 		if 'samples' in kws:
 			samples = kws['samples']
-		return self.memoization(samples)
+		memoized_samples = self.memoization(samples)
+		return samples
 
 	def save(self, *ars, **kws):
 		filename = ars[0]
@@ -236,10 +243,12 @@ class ReinforcementLearning(DQNFlyweight):
 		if 'dqn' in kwargs:
 			self.dqn = kwargs['dqn']
 
-	def steps_action(self, _act, n=4):
+	def steps_action(self, _act, n=4, double=False):
 		dqn = self.dqn
 		act = _act
-		return dqn.step(act) + dqn.step(act)
+		if double:
+			return dqn.step(act) + dqn.step(act)
+		return dqn.step(act)
 		# return ((dqn.step(act) for _ in np.arange(n)) for _ in np.arange(n))
 
 class ReinforcementLearningMemento(object):
@@ -259,12 +268,7 @@ class AgentProxy(ReinforcementLearning):
 			self.state_size = kwargs['state_size']
 
 	def action_space_down_sample(self, s):
-		# import pdb ; pdb.set_trace()
-		# return s
 		method = 'action_space'
-		# state_size = self.state_size
-		# action_space_sample = self.environment_fn(method).sample()
-		# return np.array([[action_space_sample for x in np.arange(state_size)]])
 		return self.environment_fn(method).sample()
 
 	def environment_fn(self, *ars, **kws):
@@ -329,13 +333,6 @@ def main(argv):
 	if args.env == 'list_data' and args.env_presence == 'env_spec':
 		return '\n'.join([str(name) for name in g.envs.registry.all()])
 
-	# if len(vm.observation_space.shape) > 0:
-	# 	state_size = vm.observation_space.shape[0]
-	# if len(vm.action_space.shape) > 0 and 'n' in dir(vm.action_space):
-	# 	action_size = vm.action_size.n
-	# if len(vm.action_space.shape) > 0 and not 'n' in dir(vm.action_space):
-	# 	action_size = vm.action_space.shape[0]
-
 	policy_gradient = PolicyGradientBuilder(state_size, action_size)
 
 	policy_gradient.load(args.policy_construct_file_path)
@@ -348,19 +345,14 @@ def main(argv):
 				vm.render(mode=args.mode)
 			if args.mode == 'render':
 				vm.render()
-			# act = policy_gradient.generate(rl.action_space_down_sample(s))
-			act = rl.action_space_down_sample(s)
-			act = policy_gradient.generate(act)
-			# obs, rew, don, inf = policy_gradient.learn(net.steps_action(act))
-			obs, wat, rew, ske, don, inf, ass, ast = net.steps_action(act)
+			act = policy_gradient.generate(rl.action_space_down_sample(s))
+			obs, rew, don, inf = policy_gradient.learn(net.steps_action(act))
 			obs = np.reshape(obs, [1, state_size])
-			# policy_gradient.replay(64)
-			policy_gradient.save(args.policy_builder_file_path)
-		if don.all():
+		if don:
 			break
-		# policy_gradient.replay(16)
+		policy_gradient.replay(64)
 		policy_gradient.save(args.policy_builder_file_path)
-		vm.close()
+	vm.close()
 
 if __name__ == '__main__':
 	tf.logging.set_verbosity(tf.logging.INFO)
