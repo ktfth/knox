@@ -37,6 +37,11 @@ parser.add_argument('--state_size', type=int, default=100800,
 parser.add_argument('--action_size', type=int, default=0,
 									 help='Action condition')
 
+parser.add_argument('--epochs', type=int, default=1,
+								help='Train epochs')
+parser.add_argument('--batch_size', type=int, default=64,
+									help='Batching size')
+
 class DQNAdapter(object):
 	def __init__(self, *args, **kwargs):
 		super(type(object)).__init__()
@@ -59,8 +64,8 @@ class PolicyGradientComposite(tf.keras.models.Model):
 	pass
 
 class policy_gradient_h_params:
-	learning_rate = 10e-9
-	decay = 10e-4
+	learning_rate = 20e-9
+	decay = 20e-3
 
 class memory:
 	alloc = deque(maxlen=5000)
@@ -172,11 +177,15 @@ class PolicyGradientBuilder(object):
 
 	def actual(self, state):
 		if np.random.rand() <= K.epsilon():
-			return np.random.randint(self.action_size)
+			try:
+				return np.random.randint(-1, self.action_size)
+			except Exception as e:
+				tf.logging.debug(e)
+				return int(round(radix.random() * self.action_size))
 		p = self.model.predict(np.array([[state[0] for _ in np.arange(self.state_size)]]))
 		return (p and (np.argmax(p[0]),)) or state
 
-	def replay(self, batch_size):
+	def replay(self, batch_size, eps=1):
 		es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0,
 											  patience=0, verbose=0,
 											  mode='auto')
@@ -194,7 +203,7 @@ class PolicyGradientBuilder(object):
 					t = self.target_model.predict(next_state)[0]
 					target[0][action] = reward + self.gamma * t[np.argmax(a)]
 				self.model.fit(state, target,
-							   epochs=1, verbose=0,
+							   epochs=eps, verbose=0,
 							   callbacks=[es, rpg])
 		except Exception as e:
 			tf.logging.debug(e)
@@ -244,12 +253,12 @@ class ReinforcementLearning(DQNFlyweight):
 			self.dqn = kwargs['dqn']
 
 	def steps_action(self, _act, n=4, double=False):
-		dqn = self.dqn
-		act = _act
+		dqn, act = self.dqn, _act
+		steps = dqn.step(act)
 		if double:
-			return dqn.step(act) + dqn.step(act)
-		return dqn.step(act)
-		# return ((dqn.step(act) for _ in np.arange(n)) for _ in np.arange(n))
+			for i in range(n):
+				steps = steps + dqn.step(act)
+		return steps
 
 class ReinforcementLearningMemento(object):
 	pass
@@ -350,7 +359,7 @@ def main(argv):
 			obs = np.reshape(obs, [1, state_size])
 		if don:
 			break
-		policy_gradient.replay(64)
+		policy_gradient.replay(args.batch_size, args.epochs)
 		policy_gradient.save(args.policy_builder_file_path)
 	vm.close()
 
