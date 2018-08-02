@@ -63,8 +63,10 @@ class DQNFlyweight(DQNAdapter):
 	def step(self, _action):
 		return self.agent.step(_action)
 
-class PolicyGradientComposite(tf.keras.models.Model):
-	pass
+class PolicyGradientComposite(tf.keras.models.Sequential):
+	def __init__(self, *args, **kwargs):
+		super(PolicyGradientComposite, self).__init__()
+
 
 class policy_gradient_h_params:
 	learning_rate = 10e-7
@@ -143,7 +145,7 @@ class PolicyGradientBuilder(object):
 		huber_loss = self._huber_loss
 		decay = self.decay
 		K.set_epsilon(epsilon)
-		model = tf.keras.models.Sequential()
+		model = PolicyGradientComposite()
 		model.add(tf.keras.layers.Dense(16, input_dim=state_size))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
@@ -264,12 +266,14 @@ class ReinforcementLearning(DQNFlyweight):
 		if 'dqn' in kwargs:
 			self.dqn = kwargs['dqn']
 
-	def steps_action(self, _act, n=4, double=False):
+	def steps_action(self, _act, n=4, double=False, factor=False):
 		dqn, act = self.dqn, _act
 		steps = dqn.step(act)
 		if double:
 			for i in range(n):
 				steps = steps + dqn.step(act)
+		elif factor:
+			return ((steps for _ in np.arange(n)) for _ in np.arange(n))
 		return steps
 
 class ReinforcementLearningMemento(object):
