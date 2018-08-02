@@ -68,6 +68,7 @@ class PolicyGradientComposite(tf.keras.models.Model):
 
 class policy_gradient_h_params:
 	learning_rate = 10e-7
+	epsilon = 10e-3
 	decay = 10e-5
 
 class memory:
@@ -127,6 +128,7 @@ class PolicyGradientBuilder(object):
 		self.memory = memory.alloc
 
 		self.learning_rate = policy_gradient_h_params.learning_rate
+		self.epsilon = policy_gradient_h_params.epsilon
 		self.decay = policy_gradient_h_params.decay
 
 		self.model = self._compositional_meaning(self.state_size, self.action_size)
@@ -137,17 +139,15 @@ class PolicyGradientBuilder(object):
 
 	def _compositional_meaning(self, state_size, action_size):
 		learning_rate = self.learning_rate
+		epsilon = self.epsilon
 		huber_loss = self._huber_loss
 		decay = self.decay
+		K.set_epsilon(epsilon)
 		model = tf.keras.models.Sequential()
 		model.add(tf.keras.layers.Dense(16, input_dim=state_size))
-		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(16, activation=tf.nn.relu))
-		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear))
 		model.add(tf.keras.layers.Flatten())
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
@@ -160,7 +160,9 @@ class PolicyGradientBuilder(object):
 	def _compile_target(self, model):
 		q_mean = self._mean_q
 		learning_rate = self.learning_rate
+		epsilon = self.epsilon
 		decay = self.decay
+		K.set_epsilon(epsilon)
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
 															 epsilon=K.epsilon(),
 														     decay=decay),
@@ -213,8 +215,8 @@ class PolicyGradientBuilder(object):
 					t = self.target_model.predict(next_state)[0]
 					target[0][action] = reward + self.gamma * t[np.argmax(a)]
 				self.model.fit(state, target,
-							   epochs=eps, verbose=0,
-							   callbacks=[es, rpg])
+							   epochs=eps, batch_size=batch_size,
+							   verbose=0, callbacks=[es, rpg])
 		except Exception as e:
 			tf.logging.debug(e)
 		finally:
