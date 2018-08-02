@@ -39,8 +39,11 @@ parser.add_argument('--action_size', type=int, default=0,
 
 parser.add_argument('--epochs', type=int, default=1,
 								help='Train epochs')
-parser.add_argument('--batch_size', type=int, default=64,
+parser.add_argument('--batch_size', type=int, default=128,
 									help='Batching size')
+
+parser.add_argument('--state_size_environment', type=str, default='manual',
+												help='Common interactively recognition')
 
 class DQNAdapter(object):
 	def __init__(self, *args, **kwargs):
@@ -64,8 +67,8 @@ class PolicyGradientComposite(tf.keras.models.Model):
 	pass
 
 class policy_gradient_h_params:
-	learning_rate = 20e-9
-	decay = 20e-3
+	learning_rate = 10e-7
+	decay = 10e-5
 
 class memory:
 	alloc = deque(maxlen=5000)
@@ -138,13 +141,13 @@ class PolicyGradientBuilder(object):
 		decay = self.decay
 		model = tf.keras.models.Sequential()
 		model.add(tf.keras.layers.Dense(16, input_dim=state_size))
-		model.add(tf.keras.layers.Dropout(0.2))
+		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dropout(0.2))
+		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dropout(0.2))
+		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(16, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dropout(0.2))
+		# model.add(tf.keras.layers.Dropout(0.2))
 		model.add(tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear))
 		model.add(tf.keras.layers.Flatten())
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
@@ -182,20 +185,27 @@ class PolicyGradientBuilder(object):
 			except Exception as e:
 				tf.logging.debug(e)
 				return int(round(radix.random() * self.action_size))
-		p = self.model.predict(np.array([[state[0] for _ in np.arange(self.state_size)]]))
-		return (p and (np.argmax(p[0]),)) or state
 
+		try:
+			p = self.model.predict(np.array([[state[0] for _ in np.arange(self.state_size)]]))
+			if p.tolist():
+				return np.argmax(p[0])
+		except Exception as e:
+			tf.logging.debug(e)
+		
+		return state
+	
 	def replay(self, batch_size, eps=1):
 		es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0,
 											  patience=0, verbose=0,
 											  mode='auto')
 		rpg = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
 												   patience=5, min_lr=0.001)
-		mini_batching_size = radix.sample(self.memory, batch_size)
 		try:
+			mini_batching_size = radix.sample(self.memory, batch_size)
 			for state, action, reward, next_state, done in mini_batching_size:
 				target = self.model.predict(state)
-				reward = reward * .022
+				reward = reward * .5
 				if done:
 					target[0][action] = reward
 				else:
@@ -337,6 +347,10 @@ def main(argv):
 	
 	virtualization, vm, rl, dqn, net = EnvironmentHoisiting(args.environment, g.make).instance(state_size, action_size)
 
+	if args.state_size_environment == 'space' and vm.observation_space.shape:
+		state_size = vm.observation_space.shape[0]
+	if args.state_size_environment == 'space' and 'n' in dir(vm.action_space):
+		action_size = vm.action_space.n
 	if args.env == 'list_data' and args.env_presence != 'env_spec':
 		return '\n'.join([str(name) for name in g.envs.registry.all() if str(name).find(args.env_presence) > -1])
 	if args.env == 'list_data' and args.env_presence == 'env_spec':
@@ -348,18 +362,25 @@ def main(argv):
 
 	for e in np.arange(args.episodes):
 		s = vm.reset()
-		s = np.reshape(s, [1, state_size])
+		if not np.asarray(s).size == 1:
+			s = np.reshape(s, [1, state_size])
 		for t in np.arange(args.timesteps):
 			if not args.mode == 'render':
 				vm.render(mode=args.mode)
 			if args.mode == 'render':
 				vm.render()
-			act = policy_gradient.generate(rl.action_space_down_sample(s))
-			obs, rew, don, inf = policy_gradient.learn(net.steps_action(act))
+			act = policy_gradient.generate(s)
+			act = rl.action_space_down_sample(act)
+			act = net.steps_action(act)
+			obs, rew, don, inf = policy_gradient.learn(act)
+			rew = rew if not don else -12
 			obs = np.reshape(obs, [1, state_size])
-		if don:
-			break
-		policy_gradient.replay(args.batch_size, args.epochs)
+			policy_gradient.replay(args.batch_size, args.epochs)
+			if don:
+				s = vm.reset()
+				if not np.asarray(s).size == 1:
+					s = np.reshape(s, [1, state_size])
+				break
 		policy_gradient.save(args.policy_builder_file_path)
 	vm.close()
 
