@@ -1,9 +1,11 @@
 import os
 import argparse
 import gym as g
-# import retro as r
+import threading
 import numpy as np
+# import retro as r
 import random as radix
+import multiprocessing
 import tensorflow as tf
 
 from collections import deque
@@ -16,7 +18,6 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--usage', type=str, default='app',
 							   help='Usage of the application')
-
 parser.add_argument('--mode', type=str, default='rgb',
 							  help='Rendering mode')
 parser.add_argument('--env', type=str, default='list_data_practice',
@@ -29,27 +30,26 @@ parser.add_argument('--episodes', type=int, default=10,
 								  help='Seens episode')
 parser.add_argument('--timesteps', type=int, default=1000,
 								   help='Watchout series')
-
 parser.add_argument('--policy_construct_file_path', type=str, default='solid_state.h5',
 													help='Constructing buma')
 parser.add_argument('--policy_builder_file_path', type=str, default='solid_state.h5',
 												  help='Builder buma')
-
 parser.add_argument('--state_size', type=int, default=100800,
 									help='Stateless definition of space based on observation')
 parser.add_argument('--action_size', type=int, default=0,
 									 help='Action condition')
-
 parser.add_argument('--epochs', type=int, default=1,
 								help='Train epochs')
 parser.add_argument('--batch_size', type=int, default=128,
 									help='Batching size')
-
 parser.add_argument('--state_size_environment', type=str, default='manual',
 												help='Common interactively recognition')
-
 parser.add_argument('--reinforce', type=int, default=1,
 								   help='Reinforce train based on all caption')
+parser.add_argument('--daemonize', type=str, default='dqn',
+								   help='Deep reinforcement learning based on a daemonization')
+parser.add_argument('--dqn', type=str, default='haxlem',
+							 help='Double model layers for your capacity of learn')
 
 class DQNAdapter(object):
 	def __init__(self, *args, **kwargs):
@@ -132,6 +132,9 @@ class PolicyGradientBuilder(object):
 		self.action_size = args[1]
 		if 'action_size' in kwargs:
 			self.action_size = kwargs['action_size']
+		self.haxlem = args[2]
+		if 'haxlem' in kwargs:
+			self.haxlem = kwargs['haxlem']
 
 		self.memory = memory.alloc
 
@@ -139,11 +142,43 @@ class PolicyGradientBuilder(object):
 		self.epsilon = policy_gradient_h_params.epsilon
 		self.decay = policy_gradient_h_params.decay
 
-		self.model = self._compositional_meaning(self.state_size, self.action_size)
-		self.target_model = self._compositional_meaning(self.state_size, self.action_size)
+		self.model = self._compositional_meaning(self.state_size, self.action_size, self.haxlem)
+		self.target_model = self._compositional_meaning(self.state_size, self.action_size, self.haxlem)
 		self.target_model = self._compile_target(self.target_model)
 
 		self._exchanging_rates()
+
+	def _compositional_q_meaning(self, state_size, action_size):
+		learning_rate = self.learning_rate
+		epsilon = self.epsilon
+		huber_loss = self._huber_loss
+		decay = self.decay
+		
+		K.set_epsilon(epsilon)
+		
+		image_input = tf.keras.layers.Input(shape=state_size)
+		output_resolution = tf.keras.layers.Conv2D(filters=32, kernel_size=8,
+												   strides=(4, 4), padding='valid',
+												   use_bias=True, activation='relu')(image_input)
+		output_resolution = tf.keras.layers.Dense(64)(output_resolution)
+		output_resolution = tf.keras.layers.Conv2D(filters=64, kernel_size=4,
+												   strides=(2, 2), padding='valid',
+												   activation='relu')(output_resolution)
+		output_resolution = tf.keras.layers.Dense(32)(output_resolution)
+		output_resolution = tf.keras.layers.AveragePooling2D(pool_size=(2, 2), padding='valid')(output_resolution)
+		output_resolution = tf.keras.layers.Conv2D(filters=64, kernel_size=3,
+												   strides=(1, 1), padding='valid',
+												   activation='relu')(output_resolution)
+		output_resolution = tf.keras.layers.AveragePooling2D(pool_size=(1, 1), padding='valid')(output_resolution)
+		output_resolution = tf.keras.layers.Flatten()(output_resolution)
+		output_resolution = tf.keras.layers.Dense(512, activation='relu')(output_resolution)
+		output_resolution = tf.keras.layers.Dense(action_size)(output_resolution)
+
+		return image_input, output_resolution
+
+	def _compositional_q_meaning_model(self, state_size, action_size, haxlem=False):
+		inputs, outputs = self._compositional_q_meaning(state_size, action_size)
+		return tf.keras.models.Model(inputs, outputs)
 
 	def _compositional_meaning(self, state_size, action_size):
 		learning_rate = self.learning_rate
@@ -151,13 +186,19 @@ class PolicyGradientBuilder(object):
 		huber_loss = self._huber_loss
 		decay = self.decay
 		K.set_epsilon(epsilon)
-		model = PolicyGradientComposite()
-		model.add(tf.keras.layers.Dense(16, input_dim=state_size))
-		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dense(32, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dense(16, activation=tf.nn.relu))
-		model.add(tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear))
-		model.add(tf.keras.layers.Flatten())
+		
+		if haxlem:
+			model = PolicyGradientComposite([
+				tf.keras.layers.Dense(16, input_dim=state_size),
+				tf.keras.layers.Dense(32, activation=tf.nn.relu),
+				tf.keras.layers.Dense(32, activation=tf.nn.relu),
+				tf.keras.layers.Dense(16, activation=tf.nn.relu),
+				tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear),
+				tf.keras.layers.Flatten(),
+			])
+		elif not haxlem:
+			model = self._compositional_q_meaning_model((state_size, state_size, state_size), action_size)
+		
 		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
 															 epsilon=K.epsilon(),
 															 decay=decay),
@@ -371,7 +412,10 @@ def main(argv):
 	if args.env == 'list_data' and args.env_presence == 'env_spec':
 		return '\n'.join([str(name) for name in g.envs.registry.all()])
 
-	policy_gradient = PolicyGradientBuilder(state_size, action_size)
+	if args.dqn == 'haxlem':
+		policy_gradient = PolicyGradientBuilder(state_size, action_size, True)
+	if args.dqn == 'type':
+		policy_gradient = PolicyGradientBuilder(state_size, action_size, False)
 
 	policy_gradient.load(args.policy_construct_file_path)
 
@@ -399,7 +443,17 @@ def main(argv):
 					break
 			policy_gradient.save(args.policy_builder_file_path)
 
-	for r in np.arange(args.reinforce): _reinforce()
+	for r in np.arange(args.reinforce):	
+		try:
+			trx = threading.Thread(target=_reinforce, args=())
+			trx.daemon = True
+			if args.daemonize == 'dqn':
+				trx.daemon = False
+			trx.start()
+		except MemoryError as me:
+			tf.logging.debug(me)
+		finally:
+			break
 
 	vm.close()
 
