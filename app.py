@@ -1,7 +1,7 @@
 import os
 import argparse
 import gym as g
-import retro as r
+# import retro as r
 import numpy as np
 import random as radix
 import tensorflow as tf
@@ -13,6 +13,9 @@ import warnings as ignite ; ignite.simplefilter('ignore')
 K = tf.keras.backend
 
 parser = argparse.ArgumentParser()
+
+parser.add_argument('--usage', type=str, default='app',
+							   help='Usage of the application')
 
 parser.add_argument('--mode', type=str, default='rgb',
 							  help='Rendering mode')
@@ -347,6 +350,9 @@ class EnvironmentHoisiting(ReinforcementLearningMemento):
 
 def main(argv):
 	args = parser.parse_args(argv[1:])
+
+	if args.usage == 'help':
+		return parser.print_help()
 
 	state_size = args.state_size
 	action_size = args.action_size
