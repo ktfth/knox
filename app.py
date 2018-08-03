@@ -48,6 +48,9 @@ parser.add_argument('--batch_size', type=int, default=128,
 parser.add_argument('--state_size_environment', type=str, default='manual',
 												help='Common interactively recognition')
 
+parser.add_argument('--reinforce', type=int, default=1,
+								   help='Reinforce train based on all caption')
+
 class DQNAdapter(object):
 	def __init__(self, *args, **kwargs):
 		super(type(object)).__init__()
@@ -372,28 +375,32 @@ def main(argv):
 
 	policy_gradient.load(args.policy_construct_file_path)
 
-	for e in np.arange(args.episodes):
-		s = vm.reset()
-		if not np.asarray(s).size == 1:
-			s = np.reshape(s, [1, state_size])
-		for t in np.arange(args.timesteps):
-			if not args.mode == 'render':
-				vm.render(mode=args.mode)
-			if args.mode == 'render':
-				vm.render()
-			act = policy_gradient.generate(s)
-			act = rl.action_space_down_sample(act)
-			act = net.steps_action(act)
-			obs, rew, don, inf = policy_gradient.learn(act)
-			rew = rew if not don else -12
-			obs = np.reshape(obs, [1, state_size])
-			policy_gradient.replay(args.batch_size, args.epochs)
-			if don:
-				s = vm.reset()
-				if not np.asarray(s).size == 1:
-					s = np.reshape(s, [1, state_size])
-				break
-		policy_gradient.save(args.policy_builder_file_path)
+	def _reinforce():
+		for e in np.arange(args.episodes):
+			s = vm.reset()
+			if not np.asarray(s).size == 1:
+				s = np.reshape(s, [1, state_size])
+			for t in np.arange(args.timesteps):
+				if not args.mode == 'render':
+					vm.render(mode=args.mode)
+				if args.mode == 'render':
+					vm.render()
+				act = policy_gradient.generate(s)
+				act = rl.action_space_down_sample(act)
+				act = net.steps_action(act)
+				obs, rew, don, inf = policy_gradient.learn(act)
+				rew = rew if not don else -12
+				obs = np.reshape(obs, [1, state_size])
+				policy_gradient.replay(args.batch_size, args.epochs)
+				if don:
+					s = vm.reset()
+					if not np.asarray(s).size == 1:
+						s = np.reshape(s, [1, state_size])
+					break
+			policy_gradient.save(args.policy_builder_file_path)
+
+	for r in np.arange(args.reinforce): _reinforce()
+
 	vm.close()
 
 if __name__ == '__main__':
