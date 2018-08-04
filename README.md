@@ -42,14 +42,12 @@ Leveraging from help of their features presented on the app:
 [sudo] python app.py --usage help
 ```
 
-### All of parameters gone be needed for each one described below:
+Basic example with one different game then the default:
 
-[TODO]
+```
+python app.py --mode 'render' --environment 'SpaceInvaders-ram-v0' --state_size_environment 'space' --episodes 60 --timesteps 6000 --reinforce 50 --epochs 10 --batch_size 256
+```
 
 ## Contributions
 
-[TODO]
-
-## Credits
-
-[TODO]
+All made by feature or fix review, totally welcome from code.

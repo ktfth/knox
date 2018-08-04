@@ -180,7 +180,7 @@ class PolicyGradientBuilder(object):
 		inputs, outputs = self._compositional_q_meaning(state_size, action_size)
 		return tf.keras.models.Model(inputs, outputs)
 
-	def _compositional_meaning(self, state_size, action_size):
+	def _compositional_meaning(self, state_size, action_size, haxlem=True):
 		learning_rate = self.learning_rate
 		epsilon = self.epsilon
 		huber_loss = self._huber_loss
