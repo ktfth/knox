@@ -3,7 +3,7 @@ import argparse
 import gym as g
 import threading
 import numpy as np
-# import retro as r
+import retro as r
 import random as radix
 import multiprocessing
 import tensorflow as tf
@@ -417,7 +417,9 @@ def main(argv):
 	if args.dqn == 'type':
 		policy_gradient = PolicyGradientBuilder(state_size, action_size, False)
 
-	policy_gradient.load(args.policy_construct_file_path)
+	pgc_file_path = os.path.join(os.getcwd(), args.policy_construct_file_path)
+
+	policy_gradient.load(pgc_file_path)
 
 	def _reinforce():
 		for e in np.arange(args.episodes):
@@ -441,7 +443,7 @@ def main(argv):
 					if not np.asarray(s).size == 1:
 						s = np.reshape(s, [1, state_size])
 					break
-			policy_gradient.save(args.policy_builder_file_path)
+			policy_gradient.save(pgc_file_path)
 
 	for r in np.arange(args.reinforce):	
 		try:

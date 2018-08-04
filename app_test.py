@@ -1,7 +1,9 @@
 import tensorflow as tf
 
+from app import memory
 from app import DQNAdapter
 from app import DQNFlyweight
+from collections import deque
 from app import PolicyGradientComposite
 from app import policy_gradient_h_params
 
@@ -22,7 +24,7 @@ class AppPolicyGradientTestCase(tf.test.TestCase):
 			self.assertEqual(type(PolicyGradientComposite()),
 							 PolicyGradientComposite)
 
-class AppPolicyGradientHParams(tf.test.TestCase):
+class AppPolicyGradientHParamsTestCase(tf.test.TestCase):
 	def testLearningRateValue(self):
 		with self.test_session():
 			h = policy_gradient_h_params
@@ -36,6 +38,18 @@ class AppPolicyGradientHParams(tf.test.TestCase):
 			expectation = h.epsilon
 			expected = 10e-3
 			self.assertEqual(expectation, expected)
+
+	def testDecayValue(self):
+		with self.test_session():
+			h = policy_gradient_h_params
+			expectation = h.decay
+			expected = 10e-5
+			self.assertEqual(expectation, expected)
+
+class AppMemoryAllocationTestCase(tf.test.TestCase):
+	def testDequeType(self):
+		with self.test_session():
+			self.assertEqual(type(memory.alloc), deque)
 
 if __name__ == '__main__':
 	tf.test.main()
