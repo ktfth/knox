@@ -184,7 +184,6 @@ class PolicyGradientBuilder(object):
 		learning_rate = self.learning_rate
 		epsilon = self.epsilon
 		huber_loss = self._huber_loss
-		decay = self.decay
 		K.set_epsilon(epsilon)
 		
 		if haxlem:
@@ -199,22 +198,19 @@ class PolicyGradientBuilder(object):
 		elif not haxlem:
 			model = self._compositional_q_meaning_model((state_size, state_size, state_size), action_size)
 		
-		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
-															 epsilon=K.epsilon(),
-															 decay=decay),
+		model.compile(optimizer=tf.keras.optimizers.Adam(lr=learning_rate,
+													     epsilon=K.epsilon()),
 		              loss=huber_loss,
-					  metrics=[tf.keras.metrics.categorical_accuracy])
+					  metrics=[tf.keras.metrics.sparse_top_k_categorical_accuracy])
 		return model
 
 	def _compile_target(self, model):
 		q_mean = self._mean_q
 		learning_rate = self.learning_rate
 		epsilon = self.epsilon
-		decay = self.decay
 		K.set_epsilon(epsilon)
-		model.compile(optimizer=tf.keras.optimizers.Adadelta(lr=learning_rate,
-															 epsilon=K.epsilon(),
-														     decay=decay),
+		model.compile(optimizer=tf.keras.optimizers.Adam(lr=learning_rate,
+														 epsilon=K.epsilon()),
 					  loss=q_mean)
 		return model
 
@@ -438,12 +434,12 @@ def main(argv):
 				rew = rew if not don else -12
 				obs = np.reshape(obs, [1, state_size])
 				policy_gradient.replay(args.batch_size, args.epochs)
+				policy_gradient.save(pgc_file_path)
 				if don:
 					s = vm.reset()
 					if not np.asarray(s).size == 1:
 						s = np.reshape(s, [1, state_size])
 					break
-			policy_gradient.save(pgc_file_path)
 
 	for r in np.arange(args.reinforce):	
 		try:
