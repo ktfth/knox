@@ -260,7 +260,7 @@ class PolicyGradientBuilder(object):
 					t = self.target_model.predict(next_state)[0]
 					target[0][action] = reward + self.gamma * t[np.argmax(a)]
 				self.model.fit(state, target,
-							   epochs=eps, batch_size=batch_size,
+							   epochs=eps,
 							   verbose=0, callbacks=[es, rpg])
 		except Exception as e:
 			tf.logging.debug(e)
@@ -441,17 +441,21 @@ def main(argv):
 						s = np.reshape(s, [1, state_size])
 					break
 
-	for r in np.arange(args.reinforce):	
-		try:
-			trx = threading.Thread(target=_reinforce, args=())
-			trx.daemon = True
-			if args.daemonize == 'dqn':
-				trx.daemon = False
-			trx.start()
-		except MemoryError as me:
-			tf.logging.debug(me)
-		finally:
-			break
+	def _reinforce_cycle():
+		for r in np.arange(args.reinforce):	
+			try:
+				_reinforce()
+			except MemoryError as me:
+				tf.logging.debug(me)
+			finally:
+				break
+		return policy_gradient
+
+	trx = threading.Thread(target=_reinforce_cycle, args=())
+	trx.daemon = True
+	if args.daemonize == 'dqn':
+		trx.daemon = False
+	trx.start()
 
 	vm.close()
 
