@@ -189,11 +189,14 @@ class PolicyGradientBuilder(object):
 		if haxlem:
 			model = PolicyGradientComposite([
 				tf.keras.layers.Dense(16, input_dim=state_size),
+				tf.keras.layers.LSTM(64),
 				tf.keras.layers.Dense(32, activation=tf.nn.relu),
+				tf.keras.layers.LSTM(128),
 				tf.keras.layers.Dense(32, activation=tf.nn.relu),
+				tf.keras.layers.LSTM(128),
 				tf.keras.layers.Dense(16, activation=tf.nn.relu),
+				tf.keras.layers.LSTM(64),
 				tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear),
-				tf.keras.layers.Flatten(),
 			])
 		elif not haxlem:
 			model = self._compositional_q_meaning_model((state_size, state_size, state_size), action_size)
