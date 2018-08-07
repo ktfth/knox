@@ -29,7 +29,7 @@ class AppPolicyGradientHParamsTestCase(tf.test.TestCase):
 		with self.test_session():
 			h = policy_gradient_h_params
 			expectation = h.learning_rate
-			expected = 10e-7
+			expected = 10e-9
 			self.assertEqual(expectation, expected)
 
 	def testEpsilonValue(self):

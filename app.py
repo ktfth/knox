@@ -3,7 +3,6 @@ import argparse
 import gym as g
 import threading
 import numpy as np
-import retro as r
 import random as radix
 import multiprocessing
 import tensorflow as tf
@@ -26,11 +25,11 @@ parser.add_argument('--env_presence', type=str, default='env_spec',
 							 	      help='Environment spec')
 parser.add_argument('--environment', type=str, default='MsPacman-v0',
 									 help='Environment name')
-parser.add_argument('--episodes', type=int, default=10,
+parser.add_argument('--episodes', type=int, default=20,
 								  help='Seens episode')
-parser.add_argument('--timesteps', type=int, default=1000,
+parser.add_argument('--timesteps', type=int, default=200,
 								   help='Watchout series')
-parser.add_argument('--policy_construct_file_path', type=str, default='solid_state.h5',
+parser.add_argument('--policy_construct_file_path', type=str, default='weights/solid_state.h5',
 													help='Constructing buma')
 parser.add_argument('--policy_builder_file_path', type=str, default='solid_state.h5',
 												  help='Builder buma')
@@ -40,7 +39,7 @@ parser.add_argument('--action_size', type=int, default=0,
 									 help='Action condition')
 parser.add_argument('--epochs', type=int, default=1,
 								help='Train epochs')
-parser.add_argument('--batch_size', type=int, default=128,
+parser.add_argument('--batch_size', type=int, default=64,
 									help='Batching size')
 parser.add_argument('--state_size_environment', type=str, default='manual',
 												help='Common interactively recognition')
@@ -75,7 +74,7 @@ class PolicyGradientComposite(tf.keras.models.Sequential):
 
 
 class policy_gradient_h_params:
-	learning_rate = 10e-7
+	learning_rate = 10e-9
 	epsilon = 10e-3
 	decay = 10e-5
 
@@ -189,13 +188,9 @@ class PolicyGradientBuilder(object):
 		if haxlem:
 			model = PolicyGradientComposite([
 				tf.keras.layers.Dense(16, input_dim=state_size),
-				tf.keras.layers.LSTM(64),
 				tf.keras.layers.Dense(32, activation=tf.nn.relu),
-				tf.keras.layers.LSTM(128),
 				tf.keras.layers.Dense(32, activation=tf.nn.relu),
-				tf.keras.layers.LSTM(128),
 				tf.keras.layers.Dense(16, activation=tf.nn.relu),
-				tf.keras.layers.LSTM(64),
 				tf.keras.layers.Dense(action_size, activation=tf.keras.activations.linear),
 			])
 		elif not haxlem:
@@ -416,7 +411,10 @@ def main(argv):
 	if args.dqn == 'type':
 		policy_gradient = PolicyGradientBuilder(state_size, action_size, False)
 
-	pgc_file_path = os.path.join(os.getcwd(), args.policy_construct_file_path)
+	if not 'weights' in os.listdir(os.path.join(os.getcwd())):
+		os.mkdir(os.path.join(os.getcwd(), 'weights'))
+
+	pgc_file_path = os.path.join(os.getcwd(), 'weights/%s' % args.policy_construct_file_path)
 
 	policy_gradient.load(pgc_file_path)
 
