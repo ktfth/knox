@@ -74,9 +74,9 @@ class PolicyGradientComposite(tf.keras.models.Sequential):
 
 
 class policy_gradient_h_params:
-	learning_rate = 10e-9
+	learning_rate = .99
 	epsilon = 10e-3
-	decay = 10e-5
+	# decay = 10e-5
 
 class memory:
 	alloc = deque(maxlen=5000)
@@ -139,7 +139,7 @@ class PolicyGradientBuilder(object):
 
 		self.learning_rate = policy_gradient_h_params.learning_rate
 		self.epsilon = policy_gradient_h_params.epsilon
-		self.decay = policy_gradient_h_params.decay
+		# self.decay = policy_gradient_h_params.decay
 
 		self.model = self._compositional_meaning(self.state_size, self.action_size, self.haxlem)
 		self.target_model = self._compositional_meaning(self.state_size, self.action_size, self.haxlem)
@@ -151,9 +151,9 @@ class PolicyGradientBuilder(object):
 		learning_rate = self.learning_rate
 		epsilon = self.epsilon
 		huber_loss = self._huber_loss
-		decay = self.decay
+		# decay = self.decay
 		
-		K.set_epsilon(epsilon)
+		# K.set_epsilon(epsilon)
 		
 		image_input = tf.keras.layers.Input(shape=state_size)
 		output_resolution = tf.keras.layers.Conv2D(filters=32, kernel_size=8,
@@ -250,7 +250,7 @@ class PolicyGradientBuilder(object):
 			mini_batching_size = radix.sample(self.memory, batch_size)
 			for state, action, reward, next_state, done in mini_batching_size:
 				target = self.model.predict(state)
-				reward = reward * .5
+				reward = reward * .75
 				if done:
 					target[0][action] = reward
 				else:
@@ -432,7 +432,7 @@ def main(argv):
 				act = rl.action_space_down_sample(act)
 				act = net.steps_action(act)
 				obs, rew, don, inf = policy_gradient.learn(act)
-				rew = rew if not don else -12
+				# rew = rew if not don else -10
 				obs = np.reshape(obs, [1, state_size])
 				policy_gradient.replay(args.batch_size, args.epochs)
 				policy_gradient.save(pgc_file_path)

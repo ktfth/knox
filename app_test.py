@@ -29,7 +29,7 @@ class AppPolicyGradientHParamsTestCase(tf.test.TestCase):
 		with self.test_session():
 			h = policy_gradient_h_params
 			expectation = h.learning_rate
-			expected = 10e-9
+			expected = .99
 			self.assertEqual(expectation, expected)
 
 	def testEpsilonValue(self):
@@ -39,12 +39,12 @@ class AppPolicyGradientHParamsTestCase(tf.test.TestCase):
 			expected = 10e-3
 			self.assertEqual(expectation, expected)
 
-	def testDecayValue(self):
-		with self.test_session():
-			h = policy_gradient_h_params
-			expectation = h.decay
-			expected = 10e-5
-			self.assertEqual(expectation, expected)
+	# def testDecayValue(self):
+	# 	with self.test_session():
+	# 		h = policy_gradient_h_params
+	# 		expectation = h.decay
+	# 		expected = 10e-5
+	# 		self.assertEqual(expectation, expected)
 
 class AppMemoryAllocationTestCase(tf.test.TestCase):
 	def testDequeType(self):
