@@ -1,0 +1,2 @@
+class ReinforcementLearningMemento(object):
+	pass
