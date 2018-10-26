@@ -48,9 +48,10 @@ def main(argv):
 	if not 'weights' in os.listdir(os.path.join(os.getcwd())):
 		os.mkdir(os.path.join(os.getcwd(), 'weights'))
 
-	pgc_file_path = os.path.join(os.getcwd(), 'weights/%s' % args.policy_construct_file_path)
+	pgc_file_path = os.path.join(os.getcwd(), '%s' % args.policy_construct_file_path)
 
-	policy_gradient.load(pgc_file_path)
+	if os._exists(pgc_file_path):
+		policy_gradient.load(pgc_file_path)
 
 	def _reinforce():
 		for e in np.arange(args.episodes):
@@ -62,35 +63,38 @@ def main(argv):
 					vm.render(mode=args.mode)
 				if args.mode == 'render':
 					vm.render()
-				act = policy_gradient.generate(s)
-				act = rl.action_space_down_sample(act)
-				act = net.steps_action(act)
-				obs, rew, don, inf = policy_gradient.learn(act)
-				# rew = rew if not don else -10
-				obs = np.reshape(obs, [1, state_size])
-				policy_gradient.replay(args.batch_size, args.epochs)
-				policy_gradient.save(pgc_file_path)
-				if don:
-					break
+				try:
+					act = policy_gradient.generate(s)
+				except Exception as e:
+					#tf.logging.debug(e)
+					pass
+				finally:
+					act = rl.action_space_down_sample(act)
+					act = net.steps_action(act)
+					obs, rew, don, inf = policy_gradient.learn(act)
+					# rew = rew if not don else -10
+					obs = np.reshape(obs, [1, state_size])
+					policy_gradient.replay(args.batch_size, args.epochs)
+					policy_gradient.save(pgc_file_path)
+					K.clear_session()
+					if don:
+						break
 			vm.close()
 
 	def _reinforce_cycle():
+		trx = threading.Thread(target=_reinforce, args=())
+		trx.daemon = True
+		if args.daemonize == 'dqn':
+			trx.daemon = False
 		for r in np.arange(args.reinforce):
 			try:
-				_reinforce()
+				trx.start()
 			except MemoryError as me:
-				tf.logging.debug(me)
-			finally:
+				#tf.logging.debug(me)
 				break
 		return policy_gradient
 
-	trx = threading.Thread(target=_reinforce_cycle, args=())
-	trx.daemon = True
-	if args.daemonize == 'dqn':
-		trx.daemon = False
-	trx.start()
-
-	vm.close()
+	_reinforce_cycle()
 
 if __name__ == '__main__':
 	tf.logging.set_verbosity(tf.logging.INFO)

@@ -1,4 +1,4 @@
-# Brainc Capsules
+# Knox
 
 ## Description
 
@@ -9,7 +9,7 @@ condition.
 ### Installation
 
 ```
-[sudo] conda create -n bc python=3.6
+[sudo] conda create -n io python=3.6
 ```
 
 The creation based on their environment can be a choice made
@@ -46,6 +46,10 @@ Basic example with one different game then the default:
 
 ```
 python app.py --mode 'render' --environment 'SpaceInvaders-ram-v0' --state_size_environment 'space' --episodes 60 --timesteps 6000 --reinforce 50 --epochs 10 --batch_size 256
+```
+
+```
+python app.py --environment 'MsPacman-v0' --mode 'render' --episodes 60 --timesteps 60000 --state_size_environment 100800
 ```
 
 ## Contributions

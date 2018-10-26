@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 import tensorflow as tf
 
 from policy_gradient_composite import PolicyGradientComposite
@@ -121,7 +123,7 @@ class PolicyGradientBuilder(object):
 			try:
 				return np.random.randint(-1, self.action_size)
 			except Exception as e:
-				tf.logging.debug(e)
+				#tf.logging.debug(e)
 				return int(round(radix.random() * self.action_size))
 
 		try:
@@ -129,9 +131,10 @@ class PolicyGradientBuilder(object):
 			if p.tolist():
 				return np.argmax(p[0])
 		except Exception as e:
-			tf.logging.debug(e)
-
-		return state
+			#tf.logging.debug(e)
+			pass
+		finally:
+			return state
 
 	def replay(self, batch_size, eps=1):
 		es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0,
@@ -154,7 +157,8 @@ class PolicyGradientBuilder(object):
 							   epochs=eps,
 							   verbose=0, callbacks=[es, rpg])
 		except Exception as e:
-			tf.logging.debug(e)
+			#tf.logging.debug(e)
+			pass
 		finally:
 			return (self.model, self.target_model)
 
