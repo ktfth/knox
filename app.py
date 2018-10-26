@@ -72,7 +72,7 @@ def main(argv):
 					act = rl.action_space_down_sample(act)
 					act = net.steps_action(act)
 					obs, rew, don, inf = policy_gradient.learn(act)
-					# rew = rew if not don else -10
+					rew = rew if not don else -10
 					obs = np.reshape(obs, [1, state_size])
 					policy_gradient.replay(args.batch_size, args.epochs)
 					policy_gradient.save(pgc_file_path)
