@@ -1,5 +1,4 @@
 import os
-import argparse
 import gym as g
 import threading
 import numpy as np
@@ -13,46 +12,9 @@ import warnings as ignite ; ignite.simplefilter('ignore')
 
 K = tf.keras.backend
 
-parser = argparse.ArgumentParser()
+from app_parser import parser
 
-parser.add_argument('--usage', type=str, default='app',
-							   help='Usage of the application')
-parser.add_argument('--mode', type=str, default='rgb',
-							  help='Rendering mode')
-parser.add_argument('--env', type=str, default='list_data_practice',
-							 help='Environment list')
-parser.add_argument('--env_presence', type=str, default='env_spec',
-							 	      help='Environment spec')
-parser.add_argument('--environment', type=str, default='MsPacman-v0',
-									 help='Environment name')
-parser.add_argument('--episodes', type=int, default=20,
-								  help='Seens episode')
-parser.add_argument('--timesteps', type=int, default=200,
-								   help='Watchout series')
-parser.add_argument('--policy_construct_file_path', type=str, default='weights/solid_state.h5',
-													help='Constructing buma')
-parser.add_argument('--policy_builder_file_path', type=str, default='solid_state.h5',
-												  help='Builder buma')
-parser.add_argument('--state_size', type=int, default=100800,
-									help='Stateless definition of space based on observation')
-parser.add_argument('--action_size', type=int, default=0,
-									 help='Action condition')
-parser.add_argument('--epochs', type=int, default=1,
-								help='Train epochs')
-parser.add_argument('--batch_size', type=int, default=64,
-									help='Batching size')
-parser.add_argument('--state_size_environment', type=str, default='manual',
-												help='Common interactively recognition')
-parser.add_argument('--reinforce', type=int, default=1,
-								   help='Reinforce train based on all caption')
-parser.add_argument('--daemonize', type=str, default='dqn',
-								   help='Deep reinforcement learning based on a daemonization')
-parser.add_argument('--dqn', type=str, default='haxlem',
-							 help='Double model layers for your capacity of learn')
-
-class DQNAdapter(object):
-	def __init__(self, *args, **kwargs):
-		super(type(object)).__init__()
+from dqn_adapter import DQNAdapter
 
 class DQNFlyweight(DQNAdapter):
 	def __init__(self, *args, **kwargs):
@@ -152,9 +114,9 @@ class PolicyGradientBuilder(object):
 		epsilon = self.epsilon
 		huber_loss = self._huber_loss
 		# decay = self.decay
-		
+
 		# K.set_epsilon(epsilon)
-		
+
 		image_input = tf.keras.layers.Input(shape=state_size)
 		output_resolution = tf.keras.layers.Conv2D(filters=32, kernel_size=8,
 												   strides=(4, 4), padding='valid',
@@ -184,7 +146,7 @@ class PolicyGradientBuilder(object):
 		epsilon = self.epsilon
 		huber_loss = self._huber_loss
 		K.set_epsilon(epsilon)
-		
+
 		if haxlem:
 			model = PolicyGradientComposite([
 				tf.keras.layers.Dense(16, input_dim=state_size),
@@ -195,7 +157,7 @@ class PolicyGradientBuilder(object):
 			])
 		elif not haxlem:
 			model = self._compositional_q_meaning_model((state_size, state_size, state_size), action_size)
-		
+
 		model.compile(optimizer=tf.keras.optimizers.Adam(lr=learning_rate,
 													     epsilon=K.epsilon()),
 		              loss=huber_loss,
@@ -237,9 +199,9 @@ class PolicyGradientBuilder(object):
 				return np.argmax(p[0])
 		except Exception as e:
 			tf.logging.debug(e)
-		
+
 		return state
-	
+
 	def replay(self, batch_size, eps=1):
 		es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0,
 											  patience=0, verbose=0,
@@ -394,7 +356,7 @@ def main(argv):
 
 	state_size = args.state_size
 	action_size = args.action_size
-	
+
 	virtualization, vm, rl, dqn, net = EnvironmentHoisiting(args.environment, g.make).instance(state_size, action_size)
 
 	if args.state_size_environment == 'space' and vm.observation_space.shape:
@@ -443,7 +405,7 @@ def main(argv):
 					break
 
 	def _reinforce_cycle():
-		for r in np.arange(args.reinforce):	
+		for r in np.arange(args.reinforce):
 			try:
 				_reinforce()
 			except MemoryError as me:
