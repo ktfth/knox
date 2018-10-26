@@ -14,26 +14,9 @@ K = tf.keras.backend
 
 from app_parser import parser
 
-from dqn_adapter import DQNAdapter
+from dqn_flyweight import DQNFlyweight
 
-class DQNFlyweight(DQNAdapter):
-	def __init__(self, *args, **kwargs):
-		super(DQNAdapter, self).__init__()
-
-		self.agent = None
-
-		if len(args) > 0:
-			self.agent = args[0]
-		if 'agent' in kwargs:
-			self.agent = kwargs['agent']
-
-	def step(self, _action):
-		return self.agent.step(_action)
-
-class PolicyGradientComposite(tf.keras.models.Sequential):
-	def __init__(self, *args, **kwargs):
-		super(PolicyGradientComposite, self).__init__()
-
+from policy_gradient_composite import PolicyGradientComposite
 
 class policy_gradient_h_params:
 	learning_rate = .99
