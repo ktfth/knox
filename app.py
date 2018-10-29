@@ -19,7 +19,7 @@ from environment_hoisiting import EnvironmentHoisiting
 def main(argv):
 	args = parser.parse_args(argv[1:])
 
-	if args.usage == 'help':
+	if args.help:
 		return parser.print_help()
 
 	state_size = args.state_size
