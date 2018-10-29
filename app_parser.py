@@ -30,8 +30,8 @@ parser.add_argument('--batch_size', type=int, default=64,
 									help='Batching size')
 parser.add_argument('--state_size_environment', type=str, default='manual',
 												help='Common interactively recognition')
-parser.add_argument('--reinforce', type=int, default=1,
-								   help='Reinforce train based on all caption')
+# parser.add_argument('--reinforce', type=int, default=1,
+# 								   help='Reinforce train based on all caption')
 parser.add_argument('--daemonize', type=str, default='dqn',
 								   help='Deep reinforcement learning based on a daemonization')
 parser.add_argument('--dqn', type=str, default='haxlem',

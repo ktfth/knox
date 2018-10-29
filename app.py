@@ -25,6 +25,9 @@ def main(argv):
 	state_size = args.state_size
 	action_size = args.action_size
 
+	if args.state_size_environment != 'space':
+		state_size = int(args.state_size_environment)
+
 	virtualization, vm, \
 	rl, dqn, net = EnvironmentHoisiting(args.environment,
 	                                    g.make).instance(state_size,
@@ -76,25 +79,25 @@ def main(argv):
 					obs = np.reshape(obs, [1, state_size])
 					policy_gradient.replay(args.batch_size, args.epochs)
 					policy_gradient.save(pgc_file_path)
-					K.clear_session()
 					if don:
 						break
+			K.clear_session()
 			vm.close()
 
-	def _reinforce_cycle():
-		trx = threading.Thread(target=_reinforce, args=())
-		trx.daemon = True
-		if args.daemonize == 'dqn':
-			trx.daemon = False
-		for r in np.arange(args.reinforce):
-			try:
-				trx.start()
-			except MemoryError as me:
-				#tf.logging.debug(me)
-				break
-		return policy_gradient
+	# def _reinforce_cycle():
+	# 	trx = threading.Thread(target=_reinforce, args=())
+	# 	trx.daemon = True
+	# 	if args.daemonize == 'dqn':
+	# 		trx.daemon = False
+	# 	for r in np.arange(args.reinforce):
+	# 		try:
+	# 			trx.start()
+	# 		except MemoryError as me:
+	# 			#tf.logging.debug(me)
+	# 			break
+	# 	return policy_gradient
 
-	_reinforce_cycle()
+	_reinforce()
 
 if __name__ == '__main__':
 	tf.logging.set_verbosity(tf.logging.INFO)
