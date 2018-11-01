@@ -22,11 +22,12 @@ def main(argv):
 	if args.help_usage == 'program':
 		return parser.print_help()
 
-	state_size = args.state_size
+	state_size = args.state_size or 100800
 	action_size = args.action_size
 
 	if args.state_size_environment != 'space':
-		state_size = int(args.state_size_environment)
+		state_size = int((args.state_size_environment == 'manual' and 100800) or \
+		                 args.state_size_environment)
 
 	virtualization, vm, \
 	rl, dqn, net = EnvironmentHoisiting(args.environment,
