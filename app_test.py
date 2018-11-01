@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-from app import memory
-from app import DQNAdapter
-from app import DQNFlyweight
+from parameters import memory
+from dqn_adapter import DQNAdapter
+from dqn_flyweight import DQNFlyweight
 from collections import deque
-from app import PolicyGradientComposite
-from app import policy_gradient_h_params
+from policy_gradient_composite import PolicyGradientComposite
+from parameters import policy_gradient_h_params
 
 class AppDQNTestCase(tf.test.TestCase):
 	def testDQNAdapterTypeClass(self):
@@ -29,14 +29,14 @@ class AppPolicyGradientHParamsTestCase(tf.test.TestCase):
 		with self.test_session():
 			h = policy_gradient_h_params
 			expectation = h.learning_rate
-			expected = .99
+			expected = 1e-08
 			self.assertEqual(expectation, expected)
 
 	def testEpsilonValue(self):
 		with self.test_session():
 			h = policy_gradient_h_params
 			expectation = h.epsilon
-			expected = 10e-3
+			expected = 1e-06
 			self.assertEqual(expectation, expected)
 
 	# def testDecayValue(self):

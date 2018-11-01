@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--help', help='Usage of the application')
+parser.add_argument('--help_usage', type=str, help='Usage of the application')
 parser.add_argument('--mode', type=str, default='rgb',
 							  help='Rendering mode')
 parser.add_argument('--env', type=str, default='list_data_practice',
