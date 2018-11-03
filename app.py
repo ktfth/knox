@@ -3,7 +3,6 @@ import gym as g
 import threading
 import numpy as np
 import random as radix
-import multiprocessing
 import tensorflow as tf
 
 import warnings as ignite ; ignite.simplefilter('ignore')
@@ -85,20 +84,11 @@ def main(argv):
 			K.clear_session()
 			vm.close()
 
-	# def _reinforce_cycle():
-	# 	trx = threading.Thread(target=_reinforce, args=())
-	# 	trx.daemon = True
-	# 	if args.daemonize == 'dqn':
-	# 		trx.daemon = False
-	# 	for r in np.arange(args.reinforce):
-	# 		try:
-	# 			trx.start()
-	# 		except MemoryError as me:
-	# 			#tf.logging.debug(me)
-	# 			break
-	# 	return policy_gradient
-
-	_reinforce()
+	reinforce = threading.Thread(target=_reinforce(), args=())
+	reinforce.daemon = True
+	if args.daemonize == 'dqn':
+		reinforce.daemon = False
+	reinforce.start()
 
 if __name__ == '__main__':
 	tf.logging.set_verbosity(tf.logging.INFO)
