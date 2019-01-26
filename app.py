@@ -57,7 +57,7 @@ def main(argv):
 		policy_gradient.load(pgc_file_path)
 
 	def _reinforce():
-		for e in np.arange(args.episodes):
+		while True:
 			s = vm.reset()
 			if not np.asarray(s).size == 1:
 				s = np.reshape(s, [1, state_size])

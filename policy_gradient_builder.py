@@ -166,7 +166,9 @@ class PolicyGradientBuilder(object):
 		return QMeaning(y_true, y_pred).eval_discrete()
 
 	def _huber_loss(self, target, prediction):
-		return HuberLoss(target, prediction).eval_error()
+		# return HuberLoss(target, prediction).eval_error()
+		return tf.losses.huber_loss(
+			target, prediction, reduction=tf.losses.Reduction.NONE)
 
 	def load(self, *ars, **kws):
 		filename = ars[0]
